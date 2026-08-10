@@ -258,13 +258,13 @@ const displayedOrders = (filter === 'new'
       )}
 
       {/* Orders Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         {displayedOrders.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             {filter === 'new' ? 'لا يوجد طلبات جديدة حاليًا' : filter === 'payment_review' ? 'لا يوجد طلبات بانتظار مراجعة الدفع حاليًا' : 'لا يوجد طلبات تطابق الفلتر الحالي'}
           </div>
         ) : (
-          <table className="w-full">
+          <table className="w-full min-w-[700px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="text-right px-4 py-3 text-sm text-gray-600">رقم الطلب</th>

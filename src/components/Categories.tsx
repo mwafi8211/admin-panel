@@ -95,8 +95,8 @@ export default function Categories() {
       )}
 
       {/* Categories Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full">
+     <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+        <table className="w-full min-w-[500px]">
           <thead className="bg-gray-50">
             <tr>
               <th className="text-right px-4 py-3 text-sm text-gray-600">الأيقونة</th>

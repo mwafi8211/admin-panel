@@ -7,6 +7,7 @@ interface Product {
   price: number;
   old_price?: number;
   image: string;
+  images?: string[];
   category_id: number;
   is_active: boolean;
   is_offer: boolean;
@@ -29,8 +30,10 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadingExtra, setUploadingExtra] = useState(false);
   const [form, setForm] = useState({
-    name: '', price: '', old_price: '', image: '', category_id: '',
+    name: '', price: '', old_price: '', image: '', images: [] as string[], category_id: '',
     description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false,
   });
 
@@ -51,7 +54,7 @@ export default function Products() {
   }, []);
 
   const resetForm = () => {
-    setForm({ name: '', price: '', old_price: '', image: '', category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false });
+    setForm({ name: '', price: '', old_price: '', image: '', images: [], category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false });
     setEditing(null);
     setShowForm(false);
   };
@@ -60,18 +63,66 @@ export default function Products() {
     setEditing(p);
     setForm({
       name: p.name, price: String(p.price), old_price: String(p.old_price || ''),
-      image: p.image, category_id: String(p.category_id), description: p.description || '',
+      image: p.image, images: p.images || [], category_id: String(p.category_id), description: p.description || '',
       stock: String(p.stock), discount: String(p.discount), is_new: p.is_new,
       is_offer: p.is_offer, is_active: p.is_active, free_shipping: p.free_shipping,
     });
     setShowForm(true);
   };
 
+  // بترفع أي صورة لـ Supabase Storage وترجع الرابط المباشر بتاعها
+  const uploadToStorage = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const { error } = await supabase.storage.from('product-images').upload(fileName, file);
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(fileName);
+    return urlData.publicUrl;
+  };
+
+  // رفع الصورة الرئيسية
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadToStorage(file);
+      setForm(f => ({ ...f, image: url }));
+    } catch (err: any) {
+      alert('حصل خطأ أثناء رفع الصورة: ' + err.message);
+    }
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  // رفع صور إضافية (اختيارية) - ممكن تختار أكتر من صورة مرة واحدة
+  const handleExtraImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingExtra(true);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files)) {
+        const url = await uploadToStorage(file);
+        urls.push(url);
+      }
+      setForm(f => ({ ...f, images: [...f.images, ...urls] }));
+    } catch (err: any) {
+      alert('حصل خطأ أثناء رفع الصور: ' + err.message);
+    }
+    setUploadingExtra(false);
+    e.target.value = '';
+  };
+
+  const removeExtraImage = (url: string) => {
+    setForm(f => ({ ...f, images: f.images.filter(img => img !== url) }));
+  };
+
   const handleSave = async () => {
     const payload = {
       name: form.name, price: Number(form.price),
       old_price: form.old_price ? Number(form.old_price) : null,
-      image: form.image, category_id: Number(form.category_id),
+      image: form.image, images: form.images, category_id: Number(form.category_id),
       description: form.description, stock: Number(form.stock),
       discount: Number(form.discount), is_new: form.is_new,
       is_offer: form.is_offer, is_active: form.is_active, free_shipping: form.free_shipping,
@@ -119,7 +170,54 @@ export default function Products() {
                 <input className="border rounded-lg px-3 py-2" placeholder="السعر" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
                 <input className="border rounded-lg px-3 py-2" placeholder="السعر القديم" type="number" value={form.old_price} onChange={e => setForm({ ...form, old_price: e.target.value })} />
               </div>
-              <input className="w-full border rounded-lg px-3 py-2" placeholder="رابط الصورة" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} />
+
+              {/* الصورة الرئيسية */}
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">الصورة الرئيسية</label>
+                {form.image && (
+                  <img src={form.image} alt="معاينة" className="w-24 h-24 object-cover rounded-lg mb-2 border" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+                {uploading && <p className="text-xs text-purple-600 mt-1">جاري رفع الصورة...</p>}
+              </div>
+
+              {/* صور إضافية (اختياري) */}
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">صور إضافية (اختياري)</label>
+                {form.images.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {form.images.map((img, i) => (
+                      <div key={i} className="relative">
+                        <img src={img} alt={`صورة ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border" />
+                        <button
+                          type="button"
+                          onClick={() => removeExtraImage(img)}
+                          className="absolute -top-2 -left-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleExtraImagesUpload}
+                  disabled={uploadingExtra}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+                {uploadingExtra && <p className="text-xs text-purple-600 mt-1">جاري رفع الصور...</p>}
+                <p className="text-xs text-gray-400 mt-1">تقدر تختار أكتر من صورة مرة واحدة</p>
+              </div>
+
               <select className="w-full border rounded-lg px-3 py-2" value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}>
                 <option value="">اختر القسم</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -149,7 +247,7 @@ export default function Products() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={handleSave} className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">حفظ</button>
+              <button onClick={handleSave} disabled={uploading || uploadingExtra} className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition disabled:opacity-50">حفظ</button>
               <button onClick={resetForm} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition">إلغاء</button>
             </div>
           </div>
@@ -157,8 +255,8 @@ export default function Products() {
       )}
 
       {/* Products Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+        <table className="w-full min-w-[600px]">
           <thead className="bg-gray-50">
             <tr>
               <th className="text-right px-4 py-3 text-sm text-gray-600">المنتج</th>

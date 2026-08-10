@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Products from '../components/Products';
 import Categories from '../components/Categories';
 import Orders from '../components/Orders';
 import Settings from '../components/Settings';
 import Stats from '../components/Stats';
+import { subscribeToPush, isPushSubscribed } from '../lib/push';
 
 interface Props {
   onLogout: () => void;
@@ -18,13 +19,42 @@ const tabs = [
 ];
 
 export default function Dashboard({ onLogout }: Props) {
-  const [activeTab, setActiveTab] = useState('stats');
-  // 'new' = الطلبات الجديدة بس (بييجي من كارت الإحصائيات)
+  // لو الصفحة اتفتحت من ضغطة على إشعار (رابط فيه ?tab=orders) نفتح تاب الطلبات على طول
+  const cameFromNotification = new URLSearchParams(window.location.search).get('tab') === 'orders';
+
+  const [activeTab, setActiveTab] = useState(cameFromNotification ? 'orders' : 'stats');
+  // 'new' = الطلبات الجديدة بس (بييجي من كارت الإحصائيات أو من إشعار Push)
   // 'payment_review' = طلبات المحفظة بانتظار مراجعة الدفع (بييجي من كارت الإحصائيات)
   // 'others' = كل الطلبات ماعدا الجديدة (الوضع الافتراضي لتاب الطلبات)
-  const [ordersFilter, setOrdersFilter] = useState<'new' | 'others' | 'payment_review'>('others');
+  const [ordersFilter, setOrdersFilter] = useState<'new' | 'others' | 'payment_review'>(
+    cameFromNotification ? 'new' : 'others'
+  );
+
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
 
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+
+  useEffect(() => {
+    isPushSubscribed().then(setPushEnabled);
+
+    // ننضف الرابط من ?tab=orders بعد ما نستخدمه، عشان لو الأدمن عمل refresh
+    // ميرجعش يفتح على تاب الطلبات كل مرة
+    if (cameFromNotification) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleEnablePush = async () => {
+    setPushLoading(true);
+    const result = await subscribeToPush();
+    setPushLoading(false);
+    setPushEnabled(result.success);
+    if (!result.success) {
+      alert(result.message);
+    }
+  };
 
   // فتح تاب الطلبات مفلتر على "جديدة" بس - بيتنادى من كارت الإحصائيات
   const goToNewOrders = () => {
@@ -48,6 +78,20 @@ export default function Dashboard({ onLogout }: Props) {
             <p className="text-sm text-gray-500">متجر السعادة الزوجية</p>
           </div>
           <div className="flex items-center gap-4">
+            {!pushEnabled && (
+              <button
+                onClick={handleEnablePush}
+                disabled={pushLoading}
+                className="bg-purple-50 text-purple-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-100 transition disabled:opacity-50"
+              >
+                {pushLoading ? 'جاري التفعيل...' : '🔔 فعّل الإشعارات'}
+              </button>
+            )}
+            {pushEnabled && (
+              <span className="text-green-600 text-sm flex items-center gap-1">
+                ✅ الإشعارات مفعّلة
+              </span>
+            )}
             <span className="text-sm text-gray-600">👋 {admin.name}</span>
             <button
               onClick={() => {
