@@ -24,10 +24,11 @@ const settingLabels: Record<string, string> = {
   wallet_number: 'رقم المحفظة',
   whatsapp_number: 'رقم الواتساب',
   free_shipping_threshold: 'الحد الأدنى للشحن المجاني (ج)',
-  discount_code_expiration: 'انتهاء صلاحية كود الخصم (بالأيام)',
   default_shipping_cost: 'تكلفة الشحن (ج)',
   lucky_draw_min_order: 'الحد الأدنى لدخول السحب الشهري (ج)',
   lucky_draw_period_days: 'مدة دورة السحب (بالأيام)',
+  lucky_draw_last_reset: 'تاريخ آخر سحب',
+  discount_code_expiration: 'مدة صلاحية كود الخصم (بالأيام)',
 };
 
 export default function Settings() {
