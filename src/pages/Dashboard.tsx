@@ -4,7 +4,8 @@ import Categories from '../components/Categories';
 import Orders from '../components/Orders';
 import Settings from '../components/Settings';
 import Stats from '../components/Stats';
-import { subscribeToPush, isPushSubscribed } from '../lib/push';
+import LuckyDraw from '../components/LuckyDraw';
+import { subscribeToPush, isPushSubscribed, unsubscribeFromPush } from '../lib/push';
 
 interface Props {
   onLogout: () => void;
@@ -15,6 +16,7 @@ const tabs = [
   { id: 'products', label: '📦 المنتجات' },
   { id: 'categories', label: '🗂️ الأقسام' },
   { id: 'orders', label: '🛍️ الطلبات' },
+  { id: 'draw', label: '🎰 السحب الشهري' },
   { id: 'settings', label: '⚙️ الإعدادات' },
 ];
 
@@ -56,6 +58,20 @@ export default function Dashboard({ onLogout }: Props) {
     }
   };
 
+  const handleDisablePush = async () => {
+    if (!confirm('هل تريد إيقاف الإشعارات على هذا الجهاز؟')) return;
+    setPushLoading(true);
+    try {
+      await unsubscribeFromPush();
+      setPushEnabled(false);
+    } catch (err) {
+      console.error(err);
+      alert('حصل خطأ أثناء إيقاف الإشعارات');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
   // فتح تاب الطلبات مفلتر على "جديدة" بس - بيتنادى من كارت الإحصائيات
   const goToNewOrders = () => {
     setOrdersFilter('new');
@@ -88,9 +104,14 @@ export default function Dashboard({ onLogout }: Props) {
               </button>
             )}
             {pushEnabled && (
-              <span className="text-green-600 text-sm flex items-center gap-1">
-                ✅ الإشعارات مفعّلة
-              </span>
+              <button
+                onClick={handleDisablePush}
+                disabled={pushLoading}
+                title="اضغط لإيقاف الإشعارات على هذا الجهاز"
+                className="text-green-600 text-sm flex items-center gap-1 hover:text-red-600 transition disabled:opacity-50"
+              >
+                {pushLoading ? 'جاري الإيقاف...' : '✅ الإشعارات مفعّلة (اضغط للإيقاف)'}
+              </button>
             )}
             <span className="text-sm text-gray-600">👋 {admin.name}</span>
             <button
@@ -134,7 +155,9 @@ export default function Dashboard({ onLogout }: Props) {
         {activeTab === 'products' && <Products />}
         {activeTab === 'categories' && <Categories />}
         {activeTab === 'orders' && <Orders filter={ordersFilter} onShowNew={goToNewOrders} />}
+        {activeTab === 'draw' && <LuckyDraw />}
         {activeTab === 'settings' && <Settings />}
+
       </div>
     </div>
   );

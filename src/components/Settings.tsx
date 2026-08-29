@@ -14,6 +14,9 @@ interface DiscountCode {
   code: string;
   percentage: number;
   is_active: boolean;
+  discount_type?: string;
+  amount?: number;
+  expires_at?: string;
 }
 
 const settingLabels: Record<string, string> = {
@@ -21,7 +24,10 @@ const settingLabels: Record<string, string> = {
   wallet_number: 'رقم المحفظة',
   whatsapp_number: 'رقم الواتساب',
   free_shipping_threshold: 'الحد الأدنى للشحن المجاني (ج)',
+  discount_code_expiration: 'انتهاء صلاحية كود الخصم (بالأيام)',
   default_shipping_cost: 'تكلفة الشحن (ج)',
+  lucky_draw_min_order: 'الحد الأدنى لدخول السحب الشهري (ج)',
+  lucky_draw_period_days: 'مدة دورة السحب (بالأيام)',
 };
 
 export default function Settings() {
@@ -29,7 +35,7 @@ export default function Settings() {
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
-  const [newCode, setNewCode] = useState({ code: '', percentage: '' });
+  const [newCode, setNewCode] = useState({ code: '', percentage: '', discountType: 'percentage', amount: '' });
 
   const fetchData = async () => {
     const [settingsRes, codesRes] = await Promise.all([
@@ -67,12 +73,23 @@ export default function Settings() {
   };
 
   const addCode = async () => {
-    if (!newCode.code || !newCode.percentage) return;
+    if (!newCode.code) return;
+    if (newCode.discountType === 'percentage' && !newCode.percentage) return;
+    if (newCode.discountType === 'fixed' && !newCode.amount) return;
+
+    const { data: expSetting } = await supabase
+      .from('settings').select('value').eq('key', 'discount_code_expiration').single();
+    const days = expSetting ? Number(expSetting.value) : 30;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
     await supabase.from('discount_codes').insert({
       code: newCode.code.toUpperCase(),
-      percentage: Number(newCode.percentage),
+      discount_type: newCode.discountType,
+      percentage: newCode.discountType === 'percentage' ? Number(newCode.percentage) : 0,
+      amount: newCode.discountType === 'fixed' ? Number(newCode.amount) : null,
+      expires_at: expiresAt,
     });
-    setNewCode({ code: '', percentage: '' });
+    setNewCode({ code: '', percentage: '', discountType: 'percentage', amount: '' });
     fetchData();
   };
 
@@ -110,20 +127,38 @@ export default function Settings() {
         <h2 className="text-lg font-bold text-gray-800 mb-6">أكواد الخصم</h2>
 
         {/* Add Code */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-3 mb-6 flex-wrap">
           <input
             className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
             placeholder="كود الخصم (مثال: SAVE10)"
             value={newCode.code}
             onChange={e => setNewCode({ ...newCode, code: e.target.value.toUpperCase() })}
           />
-          <input
-            className="w-24 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
-            placeholder="النسبة %"
-            type="number"
-            value={newCode.percentage}
-            onChange={e => setNewCode({ ...newCode, percentage: e.target.value })}
-          />
+          <select
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500"
+            value={newCode.discountType}
+            onChange={e => setNewCode({ ...newCode, discountType: e.target.value })}
+          >
+            <option value="percentage">نسبة %</option>
+            <option value="fixed">مبلغ ثابت (ج)</option>
+          </select>
+          {newCode.discountType === 'percentage' ? (
+            <input
+              className="w-24 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
+              placeholder="النسبة %"
+              type="number"
+              value={newCode.percentage}
+              onChange={e => setNewCode({ ...newCode, percentage: e.target.value })}
+            />
+          ) : (
+            <input
+              className="w-24 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500"
+              placeholder="المبلغ ج"
+              type="number"
+              value={newCode.amount}
+              onChange={e => setNewCode({ ...newCode, amount: e.target.value })}
+            />
+          )}
           <button
             onClick={addCode}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
@@ -138,7 +173,14 @@ export default function Settings() {
             <div key={c.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <span className="font-mono font-bold text-purple-600">{c.code}</span>
-                <span className="text-sm text-gray-500">{c.percentage}% خصم</span>
+                <span className="text-sm text-gray-500">
+                  {c.discount_type === 'fixed' ? `${c.amount} ج خصم` : `${c.percentage}% خصم`}
+                </span>
+                {c.expires_at && (
+                  <span className="text-xs text-gray-400">
+                    {new Date(c.expires_at) < new Date() ? '⛔ منتهي' : '⏳ ينتهي'} {new Date(c.expires_at).toLocaleDateString('ar-EG')}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <button
