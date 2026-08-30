@@ -17,6 +17,7 @@ interface Product {
   rating: number;
   description?: string;
   free_shipping: boolean;
+  is_single_product: boolean;
 }
 
 interface Category {
@@ -34,7 +35,7 @@ export default function Products() {
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [form, setForm] = useState({
     name: '', price: '', old_price: '', image: '', images: [] as string[], category_id: '',
-    description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false,
+    description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false,
   });
 
   const fetchProducts = async () => {
@@ -54,7 +55,7 @@ export default function Products() {
   }, []);
 
   const resetForm = () => {
-    setForm({ name: '', price: '', old_price: '', image: '', images: [], category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false });
+    setForm({ name: '', price: '', old_price: '', image: '', images: [], category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false });
     setEditing(null);
     setShowForm(false);
   };
@@ -65,7 +66,7 @@ export default function Products() {
       name: p.name, price: String(p.price), old_price: String(p.old_price || ''),
       image: p.image, images: p.images || [], category_id: String(p.category_id), description: p.description || '',
       stock: String(p.stock), discount: String(p.discount), is_new: p.is_new,
-      is_offer: p.is_offer, is_active: p.is_active, free_shipping: p.free_shipping,
+      is_offer: p.is_offer, is_active: p.is_active, free_shipping: p.free_shipping, is_single_product: p.is_single_product,
     });
     setShowForm(true);
   };
@@ -126,7 +127,12 @@ export default function Products() {
       description: form.description, stock: Number(form.stock),
       discount: Number(form.discount), is_new: form.is_new,
       is_offer: form.is_offer, is_active: form.is_active, free_shipping: form.free_shipping,
+      is_single_product: form.is_single_product,
     };
+
+    if (form.is_single_product) {
+      await supabase.from('products').update({ is_single_product: false }).eq('is_single_product', true);
+    }
 
     if (editing) {
       await supabase.from('products').update(payload).eq('id', editing.id);
@@ -243,6 +249,10 @@ export default function Products() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.free_shipping} onChange={e => setForm({ ...form, free_shipping: e.target.checked })} />
                   <span className="text-sm">الشحن مجاني</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.is_single_product} onChange={e => setForm({ ...form, is_single_product: e.target.checked })} />
+                  <span className="text-sm">صفحة المنتج المستقل</span>
                 </label>
               </div>
             </div>
