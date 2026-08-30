@@ -18,6 +18,12 @@ interface Product {
   description?: string;
   free_shipping: boolean;
   is_single_product: boolean;
+  subtitle_ar?: string;
+  pitch_ar?: string;
+  features?: { icon: string; title: string; desc: string }[];
+  contents?: { title: string; desc: string; price: string }[];
+  discount_code?: string;
+  discount_amount?: number;
 }
 
 interface Category {
@@ -36,6 +42,9 @@ export default function Products() {
   const [form, setForm] = useState({
     name: '', price: '', old_price: '', image: '', images: [] as string[], category_id: '',
     description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false,
+    subtitle_ar: '', pitch_ar: '', discount_code: '', discount_amount: '0',
+    features: [] as { icon: string; title: string; desc: string }[],
+    contents: [] as { title: string; desc: string; price: string }[],
   });
 
   const fetchProducts = async () => {
@@ -55,7 +64,8 @@ export default function Products() {
   }, []);
 
   const resetForm = () => {
-    setForm({ name: '', price: '', old_price: '', image: '', images: [], category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false });
+    setForm({ name: '', price: '', old_price: '', image: '', images: [], category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false,
+      subtitle_ar: '', pitch_ar: '', discount_code: '', discount_amount: '0', features: [], contents: [] });
     setEditing(null);
     setShowForm(false);
   };
@@ -67,6 +77,9 @@ export default function Products() {
       image: p.image, images: p.images || [], category_id: String(p.category_id), description: p.description || '',
       stock: String(p.stock), discount: String(p.discount), is_new: p.is_new,
       is_offer: p.is_offer, is_active: p.is_active, free_shipping: p.free_shipping, is_single_product: p.is_single_product,
+      subtitle_ar: p.subtitle_ar || '', pitch_ar: p.pitch_ar || '',
+      discount_code: p.discount_code || '', discount_amount: String(p.discount_amount || '0'),
+      features: p.features || [], contents: p.contents || [],
     });
     setShowForm(true);
   };
@@ -119,6 +132,20 @@ export default function Products() {
     setForm(f => ({ ...f, images: f.images.filter(img => img !== url) }));
   };
 
+  // إدارة قائمة المميزات
+  const addFeature = () => setForm(f => ({ ...f, features: [...f.features, { icon: '✨', title: '', desc: '' }] }));
+  const updateFeature = (i: number, key: 'icon' | 'title' | 'desc', value: string) => {
+    setForm(f => ({ ...f, features: f.features.map((feat, idx) => idx === i ? { ...feat, [key]: value } : feat) }));
+  };
+  const removeFeature = (i: number) => setForm(f => ({ ...f, features: f.features.filter((_, idx) => idx !== i) }));
+
+  // إدارة قائمة المحتوى والملحقات
+  const addContent = () => setForm(f => ({ ...f, contents: [...f.contents, { title: '', desc: '', price: '' }] }));
+  const updateContent = (i: number, key: 'title' | 'desc' | 'price', value: string) => {
+    setForm(f => ({ ...f, contents: f.contents.map((c, idx) => idx === i ? { ...c, [key]: value } : c) }));
+  };
+  const removeContent = (i: number) => setForm(f => ({ ...f, contents: f.contents.filter((_, idx) => idx !== i) }));
+
   const handleSave = async () => {
     const payload = {
       name: form.name, price: Number(form.price),
@@ -128,6 +155,9 @@ export default function Products() {
       discount: Number(form.discount), is_new: form.is_new,
       is_offer: form.is_offer, is_active: form.is_active, free_shipping: form.free_shipping,
       is_single_product: form.is_single_product,
+      subtitle_ar: form.subtitle_ar, pitch_ar: form.pitch_ar,
+      discount_code: form.discount_code || null, discount_amount: Number(form.discount_amount),
+      features: form.features, contents: form.contents,
     };
 
     if (form.is_single_product) {
@@ -229,6 +259,18 @@ export default function Products() {
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <textarea className="w-full border rounded-lg px-3 py-2" placeholder="الوصف" rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+
+              {/* حقول صفحة المنتج المستقل */}
+              <div className="border-t pt-3 mt-1">
+                <p className="text-sm font-bold text-purple-600 mb-2">بيانات صفحة المنتج المستقل</p>
+                <input className="w-full border rounded-lg px-3 py-2 mb-2" placeholder="العنوان الفرعي" value={form.subtitle_ar} onChange={e => setForm({ ...form, subtitle_ar: e.target.value })} />
+                <textarea className="w-full border rounded-lg px-3 py-2 mb-2" placeholder="جملة تسويقية" rows={2} value={form.pitch_ar} onChange={e => setForm({ ...form, pitch_ar: e.target.value })} />
+                <div className="grid grid-cols-2 gap-3">
+                  <input className="border rounded-lg px-3 py-2" placeholder="كود الخصم" value={form.discount_code} onChange={e => setForm({ ...form, discount_code: e.target.value })} />
+                  <input className="border rounded-lg px-3 py-2" placeholder="قيمة الخصم" type="number" value={form.discount_amount} onChange={e => setForm({ ...form, discount_amount: e.target.value })} />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <input className="border rounded-lg px-3 py-2" placeholder="المخزون" type="number" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} />
                 <input className="border rounded-lg px-3 py-2" placeholder="نسبة الخصم %" type="number" value={form.discount} onChange={e => setForm({ ...form, discount: e.target.value })} />
@@ -254,6 +296,42 @@ export default function Products() {
                   <input type="checkbox" checked={form.is_single_product} onChange={e => setForm({ ...form, is_single_product: e.target.checked })} />
                   <span className="text-sm">صفحة المنتج المستقل</span>
                 </label>
+              </div>
+
+              {/* المميزات */}
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-bold text-purple-600">المميزات والفوائد</p>
+                  <button type="button" onClick={addFeature} className="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-lg hover:bg-purple-100">+ إضافة</button>
+                </div>
+                {form.features.map((f, i) => (
+                  <div key={i} className="flex gap-2 mb-2 items-start">
+                    <input className="w-14 border rounded-lg px-2 py-2 text-center" placeholder="🎯" value={f.icon} onChange={e => updateFeature(i, 'icon', e.target.value)} />
+                    <div className="flex-1 space-y-1">
+                      <input className="w-full border rounded-lg px-2 py-1 text-sm" placeholder="العنوان" value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} />
+                      <input className="w-full border rounded-lg px-2 py-1 text-sm" placeholder="الوصف" value={f.desc} onChange={e => updateFeature(i, 'desc', e.target.value)} />
+                    </div>
+                    <button type="button" onClick={() => removeFeature(i)} className="text-red-500 text-sm px-2">✕</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* المحتوى والملحقات */}
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-bold text-purple-600">محتوى العرض والملحقات</p>
+                  <button type="button" onClick={addContent} className="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-lg hover:bg-purple-100">+ إضافة</button>
+                </div>
+                {form.contents.map((c, i) => (
+                  <div key={i} className="flex gap-2 mb-2 items-start">
+                    <div className="flex-1 space-y-1">
+                      <input className="w-full border rounded-lg px-2 py-1 text-sm" placeholder="اسم القطعة" value={c.title} onChange={e => updateContent(i, 'title', e.target.value)} />
+                      <input className="w-full border rounded-lg px-2 py-1 text-sm" placeholder="الوصف" value={c.desc} onChange={e => updateContent(i, 'desc', e.target.value)} />
+                    </div>
+                    <input className="w-20 border rounded-lg px-2 py-2 text-sm" placeholder="السعر" type="number" value={c.price} onChange={e => updateContent(i, 'price', e.target.value)} />
+                    <button type="button" onClick={() => removeContent(i)} className="text-red-500 text-sm px-2">✕</button>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="flex gap-3 mt-6">
