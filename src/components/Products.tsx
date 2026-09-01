@@ -18,6 +18,7 @@ interface Product {
   description?: string;
   free_shipping: boolean;
   is_single_product: boolean;
+   is_single_product_2: boolean;
   subtitle_ar?: string;
   pitch_ar?: string;
   features?: { icon: string; title: string; desc: string }[];
@@ -41,7 +42,7 @@ export default function Products() {
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [form, setForm] = useState({
     name: '', price: '', old_price: '', image: '', images: [] as string[], category_id: '',
-    description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false,
+    description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false, is_single_product_2: false,
     subtitle_ar: '', pitch_ar: '', discount_code: '', discount_amount: '0',
     features: [] as { icon: string; title: string; desc: string }[],
     contents: [] as { title: string; desc: string; price: string }[],
@@ -64,7 +65,7 @@ export default function Products() {
   }, []);
 
   const resetForm = () => {
-    setForm({ name: '', price: '', old_price: '', image: '', images: [], category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false,
+    setForm({ name: '', price: '', old_price: '', image: '', images: [], category_id: '', description: '', stock: '', discount: '0', is_new: false, is_offer: false, is_active: true, free_shipping: false, is_single_product: false, is_single_product_2: false,
       subtitle_ar: '', pitch_ar: '', discount_code: '', discount_amount: '0', features: [], contents: [] });
     setEditing(null);
     setShowForm(false);
@@ -76,7 +77,7 @@ export default function Products() {
       name: p.name, price: String(p.price), old_price: String(p.old_price || ''),
       image: p.image, images: p.images || [], category_id: String(p.category_id), description: p.description || '',
       stock: String(p.stock), discount: String(p.discount), is_new: p.is_new,
-      is_offer: p.is_offer, is_active: p.is_active, free_shipping: p.free_shipping, is_single_product: p.is_single_product,
+      is_offer: p.is_offer, is_active: p.is_active, free_shipping: p.free_shipping, is_single_product: p.is_single_product, is_single_product_2: p.is_single_product_2,
       subtitle_ar: p.subtitle_ar || '', pitch_ar: p.pitch_ar || '',
       discount_code: p.discount_code || '', discount_amount: String(p.discount_amount || '0'),
       features: p.features || [], contents: p.contents || [],
@@ -154,7 +155,7 @@ export default function Products() {
       description: form.description, stock: Number(form.stock),
       discount: Number(form.discount), is_new: form.is_new,
       is_offer: form.is_offer, is_active: form.is_active, free_shipping: form.free_shipping,
-      is_single_product: form.is_single_product,
+      is_single_product: form.is_single_product, is_single_product_2: form.is_single_product_2,
       subtitle_ar: form.subtitle_ar, pitch_ar: form.pitch_ar,
       discount_code: form.discount_code || null, discount_amount: Number(form.discount_amount),
       features: form.features, contents: form.contents,
@@ -162,6 +163,9 @@ export default function Products() {
 
     if (form.is_single_product) {
       await supabase.from('products').update({ is_single_product: false }).eq('is_single_product', true);
+    }
+    if (form.is_single_product_2) {
+      await supabase.from('products').update({ is_single_product_2: false }).eq('is_single_product_2', true);
     }
 
     if (editing) {
@@ -295,6 +299,10 @@ export default function Products() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.is_single_product} onChange={e => setForm({ ...form, is_single_product: e.target.checked })} />
                   <span className="text-sm">صفحة المنتج المستقل</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.is_single_product_2} onChange={e => setForm({ ...form, is_single_product_2: e.target.checked })} />
+                  <span className="text-sm">صفحة المنتج المستقل 2</span>
                 </label>
               </div>
 
